@@ -7,7 +7,6 @@ void main() {
 
 const double itemSize = 48;
 const double itemPadding = 8;
-const double halfCellSize = itemSize/2 + itemPadding;
 
 /// [Widget] building the [MaterialApp].
 class MyApp extends StatelessWidget {
@@ -28,8 +27,8 @@ class MyApp extends StatelessWidget {
             ],
             builder: (e) {
               return Container(
-                constraints: const BoxConstraints(minWidth: itemSize),
                 height: itemSize,
+                width: itemSize,
                 margin: const EdgeInsets.all(itemPadding),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
@@ -67,6 +66,7 @@ class Dock<T> extends StatefulWidget {
 class _DockState<T> extends State<Dock<T>> {
   /// [T] items being manipulated.
   late final List<T> _items = widget.items.toList();
+  int _outedInd = -1 >>> 1; // max val
 
   @override
   Widget build(BuildContext context) {
@@ -76,14 +76,22 @@ class _DockState<T> extends State<Dock<T>> {
         color: Colors.black12,
       ),
       padding: const EdgeInsets.all(4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: _items.map( (e) => 
-          DockItem(
-            child: widget.builder(e),
-            moveOn: () => print("moveOn" ),
-          ),
-        ).toList(),
+      child: Stack(
+        children: [
+          for (final (index, item) in _items.indexed)
+            AnimatedPadding(
+              duration: const Duration(milliseconds: 200),
+              padding: EdgeInsets.only(left: 
+                (itemSize + itemPadding) * (index > _outedInd ? index -1 : index)),
+              child: SizedBox(
+                child: DockItem(
+                  goOut: () => setState(() => _outedInd = index),
+                  goIn: () => setState(() => _outedInd = -1 >>> 1), // max val
+                  child: widget.builder(item),
+                )
+              ),
+            )
+        ]
       ),
     );
   }
@@ -91,11 +99,14 @@ class _DockState<T> extends State<Dock<T>> {
 
 class DockItem extends StatefulWidget {
   final Widget child;
-  final void Function() moveOn;
+  final void Function() goOut;
+  final void Function() goIn;
   const DockItem({
     super.key, 
     required this.child, 
-    required this.moveOn});
+    required this.goOut, 
+    required this.goIn
+  });
 
   @override
   State<DockItem> createState() => _DockItemState();
@@ -104,21 +115,20 @@ class DockItem extends StatefulWidget {
 class _DockItemState extends State<DockItem> {
   double _xOffset = 0;
   double _yOffset = 0;
-  double _padding = halfCellSize;
+
+  bool _inDock = true;
 
   @override
   Widget build(BuildContext context) {
     return Draggable(
       maxSimultaneousDrags: 1,
       feedback: widget.child,
-      childWhenDragging: AnimatedPadding(
-        padding: EdgeInsets.symmetric(horizontal: _padding),
-        duration: const Duration(milliseconds: 200),
-        child: const SizedBox.shrink(),
+      childWhenDragging: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: itemSize/2 + itemPadding),
+        child: SizedBox.shrink(),
       ),
       child: widget.child,
       onDragStarted: () => setState(() {
-        _padding = halfCellSize;
         _xOffset = 0;
         _yOffset = 0;
       }),
@@ -126,16 +136,22 @@ class _DockItemState extends State<DockItem> {
         _xOffset += details.delta.dx;
         _yOffset += details.delta.dy;
         // print("_xOffset ${_xOffset} dx ${details.delta.dx}");
-        // print("_yOffset ${_yOffset} dy ${details.delta.dy} _padding ${_padding}");
+        // print("_yOffset ${_yOffset} dy ${details.delta.dy} _inDock ${_inDock}");
 
-        if (_yOffset.abs() > 2 && _padding > 0) {
-            setState(() => _padding = 0);
+        if (_yOffset.abs() > 2 && _inDock) {
+          widget.goOut();
+          setState(() => _inDock = false);
         } 
-        if (_yOffset.abs() < 20 && _padding < 0.1) {
-            setState(() => _padding = halfCellSize);
+
+        if (_yOffset.abs() < 20 && !_inDock) {
+          widget.goIn();
+          setState(() => _inDock = true);
         }
-        if (_xOffset > 2) {
-          widget.moveOn(); // move back
+      },
+      onDraggableCanceled: (velocity, offset) {
+        if (!_inDock) {
+          widget.goIn();
+          setState(() => _inDock = true);
         }
       },
     );
