@@ -127,10 +127,21 @@ class _DockState<T> extends State<Dock<T>> {
                     });
                   },
                   onCompleted: (delta) { 
-                    final int newInd = index + delta;
-                    if (delta == 0 || newInd < 0 || newInd > _items.length - 1) {
+                    int newInd = index + delta;
+                    if (delta == 0 || newInd < 0 || newInd > _items.length) {
+                      setState(() {
+                        _animated = false;
+                        _outInd = maxInt;
+                        _newInd = maxInt;
+                      });
                       return;
                     }
+
+                    // boundary case correction
+                    if (newInd == _items.length) {
+                      newInd = _items.length - 1;
+                    }
+
                     setState(() {
                       _animated = false;
                       _outInd = maxInt;
