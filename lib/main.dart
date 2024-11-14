@@ -200,6 +200,10 @@ class _DockItemState extends State<DockItem> {
           widget.goIn((_xOffset / itemSize).round(), true);
           setState(() => _inDock = true);
         }
+
+        if (_xOffset.abs() > itemSize && _inDock) {
+          widget.goIn((_xOffset / itemSize).round(), true);
+        }
       },
       onDraggableCanceled: (velocity, offset) {
         if (!_inDock) {
