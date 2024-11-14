@@ -66,9 +66,10 @@ class Dock<T> extends StatefulWidget {
 /// State of the [Dock] used to manipulate the [_items].
 class _DockState<T> extends State<Dock<T>> {
   /// [T] items being manipulated.
-  late final List<T> _items = widget.items.toList();
+  late List<T> _items = widget.items.toList();
   int _outInd = maxInt;
   int _newInd = maxInt;
+  bool _animated = true;
 
   double _itemPadding (int index) {
     // boundary case
@@ -83,6 +84,13 @@ class _DockState<T> extends State<Dock<T>> {
     return   (itemSize + itemGap) * ((index > _outInd && index <= _newInd) ? index - 1 : index);
   }
 
+  List<T> changedList (int index, int newInd) {
+    T current = _items[index];
+    _items.removeAt(index);
+    _items.insert(newInd, current);
+    return _items;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -95,18 +103,20 @@ class _DockState<T> extends State<Dock<T>> {
         children: [
           for (final (index, item) in _items.indexed)
             AnimatedPadding(
-              duration: const Duration(milliseconds: 200),
+              duration: Duration(milliseconds: _animated ? 200 : 0),
               padding: EdgeInsets.only(left: _itemPadding(index)),
               child: SizedBox(
                 child: DockItem(
                   goOut: () {
                     setState(() {
+                      _animated = true;
                       _outInd = index;
                       _newInd = maxInt;
                     });
                   },
-                  goIn: (delta) {
+                  goIn: (delta, animated) {
                     setState(() {
+                      _animated = animated;
                       _outInd = delta == 0 ? maxInt : index;
 
                       if (delta != 0 && index + delta > -2) {
@@ -114,6 +124,18 @@ class _DockState<T> extends State<Dock<T>> {
                       } else {
                         _newInd = maxInt;
                       }
+                    });
+                  },
+                  onCompleted: (delta) { 
+                    final int newInd = index + delta;
+                    if (delta == 0 || newInd < 0 || newInd > _items.length - 1) {
+                      return;
+                    }
+                    setState(() {
+                      _animated = false;
+                      _outInd = maxInt;
+                      _newInd = maxInt;
+                      _items = changedList(index, newInd);
                     });
                   },
                   child: widget.builder(item),
@@ -129,12 +151,14 @@ class _DockState<T> extends State<Dock<T>> {
 class DockItem extends StatefulWidget {
   final Widget child;
   final void Function() goOut;
-  final void Function(int delta) goIn;
+  final void Function(int delta, bool animated) goIn;
+  final void Function(int delta) onCompleted;
   const DockItem({
     super.key, 
     required this.child, 
     required this.goOut, 
-    required this.goIn
+    required this.goIn, 
+    required this.onCompleted
   });
 
   @override
@@ -173,14 +197,16 @@ class _DockItemState extends State<DockItem> {
         } 
 
         if (_yOffset.abs() < itemSize && !_inDock) {
-          widget.goIn((_xOffset / itemSize).round());
+          widget.goIn((_xOffset / itemSize).round(), true);
           setState(() => _inDock = true);
         }
       },
       onDraggableCanceled: (velocity, offset) {
         if (!_inDock) {
-          widget.goIn(0);
+          widget.goIn(0, false);
           setState(() => _inDock = true);
+        } else {
+          widget.onCompleted((_xOffset / itemSize).round());
         }
       },
     );
