@@ -78,7 +78,7 @@ class _DockState<T> extends State<Dock<T>> {
     }
 
     // commom cases
-    if (_outInd > _newInd && _newInd > -2) {
+    if (_outInd > _newInd) {
       return (itemSize + itemGap) * ((index >= _newInd && index < _outInd) ? index + 1 : index);
     }
     return   (itemSize + itemGap) * ((index > _outInd && index <= _newInd) ? index - 1 : index);
@@ -199,8 +199,6 @@ class _DockItemState extends State<DockItem> {
       onDragUpdate: (details) {
         _xOffset += details.delta.dx;
         _yOffset += details.delta.dy;
-        // print("_xOffset ${_xOffset} dx ${details.delta.dx}");
-        // print("_yOffset ${_yOffset} dy ${details.delta.dy} _inDock ${_inDock}");
 
         if (_yOffset.abs() > itemSize && _inDock) {
           widget.goOut();
