@@ -20,9 +20,9 @@ class MyApp extends StatelessWidget {
         body: Center(
           child: Dock(
             items: const [
+              Icons.call,
               Icons.person,
               Icons.message,
-              Icons.call,
               Icons.camera,
               Icons.photo,
             ],
