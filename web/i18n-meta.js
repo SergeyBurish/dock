@@ -17,6 +17,4 @@
 
   // Подставляем описание в нужные теги
   setMeta('meta[name="description"]',        desc);
-  setMeta('meta[property="og:description"]', desc);
-  setMeta('meta[name="twitter:description"]',desc);
 })();
